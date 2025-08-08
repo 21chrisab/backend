@@ -13,7 +13,7 @@ const PORT = 3000;
 // --- Middleware & Config ---
 app.use(express.json()); 
 app.use(cors({
-    origin: ['http://localhost:3001', 'https://siteweave-ai.netlify.app'], // Allow both local and live frontend
+    origin: ['http://localhost:3001', 'https://siteweave.netlify.app'], // Allow both local and live frontend
     credentials: true
 }));
 
@@ -27,7 +27,7 @@ app.use(session({
 // --- DYNAMIC REDIRECT URI ---
 const isProduction = process.env.NODE_ENV === 'production';
 const redirectUri = isProduction 
-    ? "https://siteweave-ai-backend.onrender.com/redirect" 
+    ? "https://backend-1iqu.onrender.com" 
     : "http://localhost:3000/redirect";
 
 console.log(`Redirect URI set to: ${redirectUri}`); // For debugging
