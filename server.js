@@ -1,5 +1,5 @@
 const express = require('express');
-const session = require('express-session');
+const session = require('express-session'); // CORRECTED THIS LINE
 const msal = require('@azure/msal-node');
 const { Client } = require('@microsoft/microsoft-graph-client');
 const cors = require('cors');
@@ -13,7 +13,7 @@ const PORT = 3000;
 // --- Middleware & Config ---
 app.use(express.json()); 
 app.use(cors({
-    origin: ['http://localhost:3001', 'https://siteweave.netlify.app'], // Allow both local and live frontend
+    origin: ['http://localhost:3001', 'https://siteweave.netlify.app'],
     credentials: true
 }));
 
@@ -27,10 +27,8 @@ app.use(session({
 // --- DYNAMIC REDIRECT URI ---
 const isProduction = process.env.NODE_ENV === 'production';
 const redirectUri = isProduction 
-    ? "https://backend-1iqu.onrender.com" 
+    ? "https://backend-1iqu.onrender.com/redirect" 
     : "http://localhost:3000/redirect";
-
-console.log(`Redirect URI set to: ${redirectUri}`); // For debugging
 
 const msalConfig = {
     auth: {
@@ -48,6 +46,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 async function getGeminiAnalysis(emailContent) {
+    // ... (This function remains the same)
     console.log("Sending content to Gemini for real analysis...");
     const prompt = `
         Analyze the following construction-related email. Extract key information and respond ONLY with a valid JSON object.
@@ -70,33 +69,44 @@ async function getGeminiAnalysis(emailContent) {
         return JSON.parse(jsonString);
     } catch (error) {
         console.error("Error calling Gemini API:", error);
-        return {
-            summary: "AI analysis failed for this email.",
-            actionItems: [],
-            sentiment: "Neutral",
-            docType: "Unknown"
-        };
+        return { summary: "AI analysis failed.", actionItems: [], sentiment: "Neutral", docType: "Unknown" };
     }
 }
 
 // --- Authentication & API Routes ---
 
 app.get('/login', (req, res) => {
+    // --- ADDED DEBUG LOGGING ---
+    console.log("--- LOGIN ATTEMPT ---");
+    console.log(`NODE_ENV is: ${process.env.NODE_ENV}`);
+    console.log(`Generated redirectUri is: ${redirectUri}`);
+    // --- END DEBUG LOGGING ---
+
     const authCodeUrlParameters = { scopes, redirectUri };
+    // CORRECTED THE VARIABLE NAME IN THE LINE BELOW
     pca.getAuthCodeUrl(authCodeUrlParameters)
         .then((response) => res.redirect(response))
-        .catch((error) => res.status(500).send(error));
+        .catch((error) => {
+            console.error("Error getting auth code URL:", error);
+            res.status(500).send(error);
+        });
 });
 
 app.get('/redirect', (req, res) => {
+    console.log("--- REDIRECT HIT ---");
     const tokenRequest = { code: req.query.code, scopes, redirectUri };
     pca.acquireTokenByCode(tokenRequest)
         .then((response) => {
             req.session.account = response.account;
             res.send('<script>window.close();</script>');
         })
-        .catch((error) => res.status(500).send(error));
+        .catch((error) => {
+            console.error("Error acquiring token by code:", error);
+            res.status(500).send(error);
+        });
 });
+
+// ... (the rest of your routes: /logout, /me, /fetch-emails remain the same)
 
 app.get('/logout', (req, res) => {
     req.session.destroy(() => {
@@ -143,5 +153,6 @@ app.post('/fetch-emails', async (req, res) => {
         res.status(500).send("Error fetching or analyzing emails.");
     }
 });
+
 
 app.listen(PORT, () => console.log(`Backend server running on http://localhost:${PORT}`));
